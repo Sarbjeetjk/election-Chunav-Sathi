@@ -1,0 +1,16 @@
+runtime: nodejs18
+
+handlers:
+  # Static assets from the build directory
+  - url: /assets
+    static_dir: dist/assets
+
+  # All other files from the build directory
+  - url: /(.*\.(js|css|png|jpg|svg|ico|json))$
+    static_files: dist/\1
+    upload: dist/.*\.(js|css|png|jpg|svg|ico|json)$
+
+  # Fallback to index.html for Single Page Application routing
+  - url: /.*
+    static_files: dist/index.html
+    upload: dist/index.html

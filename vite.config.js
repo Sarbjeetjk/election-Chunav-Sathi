@@ -15,6 +15,11 @@ export default defineConfig({
         target: 'https://generativelanguage.googleapis.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/gemini/, '')
+      },
+      '/api/cerebras': {
+        target: 'https://api.cerebras.ai/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/cerebras/, '')
       }
     }
   }

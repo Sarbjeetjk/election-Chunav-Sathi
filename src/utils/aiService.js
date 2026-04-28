@@ -16,6 +16,7 @@ export const getAIResponse = async (query, language = 'en') => {
   if (!API_KEY) return fallbackResponse(query, language);
 
   const isGoogle = API_KEY.startsWith('AIza');
+  const isCerebras = API_KEY.startsWith('csk-');
   
   try {
     if (isGoogle) {
@@ -31,6 +32,31 @@ export const getAIResponse = async (query, language = 'en') => {
       });
       const data = await response.json();
       return data.candidates[0].content.parts[0].text;
+    } else if (isCerebras) {
+      // CEREBRAS FLOW (Via Proxy)
+      const response = await fetch('/api/cerebras/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "llama3.1-8b",
+          messages: [
+            { role: "system", content: `You are Chunav Saathi, an election assistant. Respond in ${language === 'hi' ? 'Hindi' : 'English'}. Keep responses concise and helpful.` },
+            { role: "user", content: query }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Cerebras API Error:", response.status, errorData);
+        return fallbackResponse(query, language);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
     } else {
       const response = await fetch('/api/openai/chat/completions', {
         method: 'POST',

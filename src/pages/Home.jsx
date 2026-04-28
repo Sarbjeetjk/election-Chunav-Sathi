@@ -3,6 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { getTranslation } from '../utils/translations';
 import { Mic, Search, CalendarClock, ShieldCheck, Download, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAIResponse } from '../utils/aiService';
 
 const CountdownTimer = () => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -32,13 +33,13 @@ const CountdownTimer = () => {
         <CalendarClock className="text-saffron" />
         General Elections 2029
       </h3>
-      <div className="flex justify-center gap-4">
+      <div className="flex justify-center gap-2 sm:gap-4">
         {Object.entries(timeLeft).map(([unit, value]) => (
           <div key={unit} className="flex flex-col items-center">
-            <div className="bg-[var(--bg-secondary)] border-2 border-[var(--saffron)] text-2xl font-bold rounded-lg w-16 h-16 flex items-center justify-center shadow-lg">
+            <div className="bg-[var(--bg-secondary)] border-2 border-[var(--saffron)] text-xl sm:text-2xl font-bold rounded-lg w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
               {value}
             </div>
-            <span className="text-xs uppercase mt-2 font-medium text-[var(--text-secondary)]">{unit}</span>
+            <span className="text-[10px] sm:text-xs uppercase mt-2 font-medium text-[var(--text-secondary)]">{unit}</span>
           </div>
         ))}
       </div>
@@ -51,6 +52,27 @@ const VoiceSearch = () => {
   const [isListening, setIsListening] = useState(false);
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSearch = async (searchQuery) => {
+    if (!searchQuery.trim()) return;
+    setIsLoading(true);
+    setResponse('');
+    try {
+      const aiResponse = await getAIResponse(searchQuery, language);
+      setResponse(aiResponse);
+    } catch (error) {
+      setResponse("Sorry, I encountered an error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch(query);
+    }
+  };
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -68,12 +90,13 @@ const VoiceSearch = () => {
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setQuery(transcript);
-      simulateResponse(transcript);
+      handleSearch(transcript);
       setIsListening(false);
     };
 
     recognition.onerror = () => {
       setIsListening(false);
+      setIsLoading(false);
     };
 
     recognition.onend = () => {
@@ -83,22 +106,11 @@ const VoiceSearch = () => {
     recognition.start();
   };
 
-  const simulateResponse = (q) => {
-    const qLower = q.toLowerCase();
-    if (qLower.includes('date') || qLower.includes('कब')) {
-      setResponse("The General Elections are expected around April-May 2029.");
-    } else if (qLower.includes('booth') || qLower.includes('केंद्र')) {
-      setResponse("You can find your polling booth in the Constituency tab using your location.");
-    } else {
-      setResponse("I'm sorry, I didn't understand. Please check our Voter Services or FAQ.");
-    }
-  };
-
   return (
     <div className="card mb-8 animate-float shadow-[0_10px_40px_-10px_rgba(255,153,51,0.2)] border-[var(--saffron)]/30 border-2">
       <div className="flex flex-col items-center p-4">
         <h3 className="text-lg font-semibold mb-4 text-center">
-          {getTranslation(language, 'voice_query')}
+          {getTranslation(language, 'voice_query') || 'Ask a Question'}
         </h3>
         <div className="flex w-full max-w-md gap-3">
           <input
@@ -107,16 +119,23 @@ const VoiceSearch = () => {
             placeholder="Try 'When is my voting date?'"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
           <button
             onClick={startListening}
             className={`p-3 rounded-full transition-all text-white hover:scale-110 flex items-center justify-center shrink-0 ${isListening ? 'animate-pulse' : ''}`}
             style={{ width: '52px', height: '52px', backgroundColor: isListening ? '#ef4444' : 'var(--navy)', boxShadow: '0 4px 14px rgba(0,0,128,0.3)' }}
+            title="Search by Voice"
           >
             {isListening ? <Mic className="animate-bounce" size={24} /> : <Mic size={24} />}
           </button>
         </div>
-        {response && (
+        {isLoading && (
+          <div className="mt-4 p-3 bg-gray-50 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300 rounded-lg text-sm w-full max-w-md text-center border border-gray-200 dark:border-gray-700">
+            Thinking...
+          </div>
+        )}
+        {response && !isLoading && (
           <div className="mt-4 p-3 bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-lg text-sm w-full max-w-md text-center border border-green-200 dark:border-green-800">
             {response}
           </div>
@@ -156,9 +175,9 @@ const Home = () => {
 
   return (
     <>
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn px-4 sm:px-6">
         <div className="text-center mb-10 mt-6">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
+          <h1 className="text-3xl md:text-5xl font-extrabold mb-4">
             Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--saffron)] via-orange-400 to-[var(--green)]">Chunav Saathi</span>
           </h1>
           <p className="text-lg text-[var(--text-secondary)] max-w-2xl mx-auto">
